@@ -2,6 +2,10 @@ package coverage
 
 import (
 	"os"
+	"testing"
+	"time"
+	"strconv"
+	"errors"
 )
 
 // DO NOT EDIT THIS FUNCTION
@@ -17,4 +21,175 @@ func init() {
 }
 
 // WRITE YOUR CODE BELOW
+
+
+var (
+	people = People{
+		{firstName: "Sergei", lastName: "Fedorov", birthDay: time.Date(1969, time.Month(12), 13, 0, 0, 0, 0, time.UTC)},
+		{firstName: "Pavel", lastName: "Bure", birthDay: time.Date(1971, time.Month(3), 31, 0, 0, 0, 0, time.UTC)},
+	}
+)
+
+func TestPeopleLen(t *testing.T) {
+	if people.Len() != len(people) {
+		t.Error("function People.Len() return wrong value")
+	}
+}
+
+func TestPeopleWithNotEqualBirthdayLess(t *testing.T) {
+	people = People{
+		{firstName: "Pavel", lastName: "Bure", birthDay: time.Date(1971, time.Month(3), 31, 0, 0, 0, 0, time.UTC)},
+		{firstName: "Sergei", lastName: "Fedorov", birthDay: time.Date(1969, time.Month(12), 13, 0, 0, 0, 0, time.UTC)},
+	}
+	if result := people.Less(0, 1); result == false {
+		t.Errorf("wrong result %v, correct result: %v", result, true)
+	}
+}
+
+func TestPeopleWithEqualBirthdayAndNotEqualFirstNameLess(t *testing.T) {
+	people = People{
+		{firstName: "Pavel", lastName: "Bure", birthDay: time.Date(1971, time.Month(3), 31, 0, 0, 0, 0, time.UTC)},
+		{firstName: "Sergei", lastName: "Fedorov", birthDay: time.Date(1971, time.Month(3), 31, 0, 0, 0, 0, time.UTC)},
+	}
+	if result := people.Less(0, 1); result == false {
+		t.Errorf("wrong result %v, correct result: %v", result, true)
+	}
+}
+
+func TestPeopleWithEqualBirthdayAndEqualFirstNameLess(t *testing.T) {
+	people = People{
+		{firstName: "Pavel", lastName: "Bure", birthDay: time.Date(1971, time.Month(3), 31, 0, 0, 0, 0, time.UTC)},
+		{firstName: "Pavel", lastName: "Fedorov", birthDay: time.Date(1971, time.Month(3), 31, 0, 0, 0, 0, time.UTC)},
+	}
+	if result := people.Less(0, 1); result == false {
+		t.Errorf("wrong result %v, correct result: %v", result, true)
+	}
+}
+
+func TestPeopleSwap(t *testing.T) {
+	fistPerson, secondPerson := people[0], people[1]
+	people.Swap(0, 1)
+	if people[0] != secondPerson || people[1] != fistPerson {
+		t.Error("function People.Swap() doesn't swap people")
+	}
+}
+
+func TestNewMatrix(t *testing.T) {
+	type Test struct {
+		input  string
+		output Matrix
+	}
+	tests := []Test{
+		{input: "1 2\n3 4", output: Matrix{rows: 2, cols: 2, data: []int{1, 2, 3, 4}}},
+		{input: "1 2 3\n4 5 6", output: Matrix{rows: 2, cols: 3, data: []int{1, 2, 3, 4, 5, 6}}},
+		{input: "1 2 3\n4 5 6\n7 8 9", output: Matrix{rows: 3, cols: 3, data: []int{1, 2, 3, 4, 5, 6, 7, 8, 9}}},
+		{input: "1", output: Matrix{rows: 1, cols: 1, data: []int{1}}},
+		{input: "1 2\n1.23 3", output: Matrix{rows: 2, cols: 2, data: []int{1, 2, 3, 4}}},
+		{input: "1 2\nasd 3", output: Matrix{rows: 2, cols: 2, data: []int{1, 2, 3, 4}}},
+		{input: "1 2\n3", output: Matrix{rows: 2, cols: 2, data: []int{1, 2, 3}}},
+	}
+	for index, test := range tests {
+		matrix, err := New(test.input)
+		if index == len(tests)-1 {
+			targetErrorMsg := "Rows need to be the same length"
+			if err == nil || (err != nil && err.Error() != targetErrorMsg) {
+				t.Errorf("returns wrong output: %v, correct output: %s\n", err, targetErrorMsg)
+			}
+			if matrix != nil {
+				t.Errorf("returns wrong output: %v, correct output: %v\n", matrix, nil)
+			}
+		} else if index == len(tests)-2 || index == len(tests)-3 {
+			if errors.Is(errors.Unwrap(err), strconv.ErrSyntax) == false {
+				t.Errorf("returns wrong output: %v, correct output: %v\n", errors.Unwrap(err), strconv.ErrSyntax)
+			}
+		} else {
+			if err != nil || matrix.rows != test.output.rows || matrix.cols != test.output.cols {
+				t.Errorf("returns wrong output: %v, correct output: %v\n", matrix, test.output)
+			}
+			for i := range matrix.data {
+				if matrix.data[i] != test.output.data[i] {
+					t.Errorf("returns wrong output: %v, correct output: %v\n", matrix, test.output)
+				}
+			}
+		}
+	}
+}
+
+func TestRows(t *testing.T) {
+	type Test struct {
+		input  string
+		output [][]int
+	}
+	tests := []Test{
+		{input: "1 2\n3 4", output: [][]int{{1, 2}, {3, 4}}},
+		{input: "1 2 3\n4 5 6", output: [][]int{{1, 2, 3}, {4, 5, 6}}},
+		{input: "1 2 3\n4 5 6\n7 8 9", output: [][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}},
+		{input: "1", output: [][]int{{1}}},
+	}
+	for _, test := range tests {
+		matrix, _ := New(test.input)
+		rows := matrix.Rows()
+		for i, row := range rows {
+			for j := range row {
+				if row[j] != test.output[i][j] {
+					t.Errorf("returns wrong output: %v, correct output: %v\n", rows, test.output)
+				}
+			}
+		}
+	}
+}
+
+func TestCols(t *testing.T) {
+	type Test struct {
+		input  string
+		output [][]int
+	}
+	tests := []Test{
+		{input: "1 2\n3 4", output: [][]int{{1, 3}, {2, 4}}},
+		{input: "1 2 3\n4 5 6", output: [][]int{{1, 4}, {2, 5}, {3, 6}}},
+		{input: "1 2 3\n4 5 6\n7 8 9", output: [][]int{{1, 4, 7}, {2, 5, 8}, {3, 6, 9}}},
+		{input: "1", output: [][]int{{1}}},
+	}
+	for _, test := range tests {
+		matrix, _ := New(test.input)
+		cols := matrix.Cols()
+		for i, col := range cols {
+			for j := range col {
+				if col[j] != test.output[i][j] {
+					t.Errorf("returns wrong output: %v, correct output: %v\n", cols, test.output)
+				}
+			}
+		}
+	}
+}
+
+func TestSet(t *testing.T) {
+	type Test struct {
+		input  string
+		output Matrix
+	}
+	tests := []Test{
+		{input: "1 2\n3 4", output: Matrix{rows: 2, cols: 2, data: []int{1, 2, 3, 4}}},
+		{input: "1 2 3\n4 5 6", output: Matrix{rows: 2, cols: 3, data: []int{1, 2, 3, 4, 5, 6}}},
+		{input: "1 2 3\n4 5 6\n7 8 9", output: Matrix{rows: 3, cols: 3, data: []int{1, 2, 3, 4, 5, 6, 7, 8, 9}}},
+		{input: "1", output: Matrix{rows: 1, cols: 1, data: []int{1}}},
+	}
+	for _, test := range tests {
+		matrix, _ := New(test.input)
+		rows := matrix.Rows()
+		for i, row := range rows {
+			for j := range row {
+				if result := matrix.Set(i, j, 10); result == false {
+					t.Errorf("returns wrong output: %v, correct output: %v\n", result, true)
+				}
+			}
+		}
+		if result := matrix.Set(matrix.rows+1, matrix.cols+1, 0); result == true {
+			t.Errorf("returns wrong output: %v, correct output: %v\n", result, false)
+		}
+		if result := matrix.Set(-1, -1, 0); result == true {
+			t.Errorf("returns wrong output: %v, correct output: %v\n", result, false)
+		}
+	}
+}
 
